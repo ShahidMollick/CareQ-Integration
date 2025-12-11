@@ -28,6 +28,80 @@ This document specifies the API endpoints that the third-party system must imple
 * **Appointment Details**
 * **Service/Treatment Information**
 
+## Integeration Architecture
+```mermaid
+sequenceDiagram
+    participant Patient
+    participant CareQ as CareQ Platform (Queue Management)
+    participant Payment as Payment Gateway
+    participant HMIS as Hospital HMIS (Patient Records)
+    participant RegDesk as Registration Desk
+
+    Note over Patient,HMIS: Scenario 1: Online Booking with Prepayment
+
+    Patient->>CareQ: 1. Select Doctor & Time Slot
+    CareQ->>HMIS: GET /doctors\nFetch Available Doctors
+    HMIS-->>CareQ: Doctor List with Schedules
+
+    Patient->>CareQ: 2. Enter Patient Details
+    CareQ->>HMIS: POST /patient/search\nCheck if Patient Exists
+
+    alt Patient Exists in HMIS
+        HMIS-->>CareQ: Patient Found\nuhid: 12345, name: John
+        CareQ->>CareQ: Link to Existing UHID
+    else New Patient
+        HMIS-->>CareQ: Patient Not Found
+        Note over CareQ: Patient details stored temporarily
+    end
+
+    Patient->>Payment: 3. Make Payment
+    Payment-->>CareQ: Payment Successful\ntransaction_id: TXN123
+
+    alt New Patient
+        CareQ->>HMIS: POST /patient/register\nCreate Patient Record
+        HMIS->>HMIS: Generate UHID
+        HMIS-->>CareQ: Patient Created\nuhid: 12346
+    end
+
+    CareQ->>HMIS: POST /appointment/book\n{uhid, doctor_id, datetime, payment_ref}
+    HMIS->>HMIS: Create Appointment Record
+    HMIS-->>CareQ: Appointment Created\nappointment_id: APT001
+
+    CareQ->>CareQ: Add to Queue System\nStatus: Checked-In Online
+    CareQ-->>Patient: Booking Confirmed\nUHID: 12346 | Token: Q15
+
+    Note over Patient,HMIS: Scenario 2: Walk-In Registration at Desk
+
+    Patient->>RegDesk: Walk-In for Appointment
+    RegDesk->>HMIS: Search/Register Patient\nGenerate UHID
+    HMIS-->>RegDesk: UHID: 12347
+
+    RegDesk->>HMIS: Create Appointment\nPayment at Desk
+    HMIS-->>RegDesk: Appointment Created
+
+    RegDesk->>CareQ: POST /queue/add\n{uhid, appointment_id, doctor_id}
+    CareQ->>CareQ: Add to Queue System\nStatus: Checked-In Desk
+    CareQ-->>RegDesk: Queue Token: Q16
+
+    RegDesk-->>Patient: Give Token Q16
+
+    Note over Patient,HMIS: Queue Management (CareQ Handles This)
+
+    CareQ->>CareQ: Monitor Queue Status\nQ15: Waiting → Q16: Waiting
+    CareQ->>Patient: SMS/Display\nYour turn in 2 patients
+
+    CareQ->>CareQ: Doctor Ready\nUpdate: Q15 → In Consultation
+    CareQ->>HMIS: POST /appointment/status\nstatus: in_progress
+    HMIS-->>CareQ: Status Updated
+
+    CareQ->>CareQ: Consultation Complete\nUpdate: Q15 → Completed
+    CareQ->>HMIS: POST /appointment/status\nstatus: completed
+    HMIS-->>CareQ: Status Updated
+
+    HMIS->>HMIS: Doctor adds prescription & notes
+```
+
+
 **Note:** Queue management functionality is NOT synced and will be handled exclusively on CareQ's side.
 
 ### Integration Flow
@@ -931,241 +1005,6 @@ Phone: [your-contact-number]
 | Version | Date       | Changes               |
 | ------- | ---------- | --------------------- |
 | 1.0.0   | 2025-12-10 | Initial specification |
-
----
-
-## Appendix A: Complete Integration Workflow
-
-```mermaid
-flowchart TD
-  A[Patient books appointment on CareQ] --> B[CareQ validates booking]
-  B --> C{Patient exists in third-party?}
-  C -->|No| D[Call POST /patient (create)]
-  C -->|Yes| E[Call POST /patient (update)]
-  B --> F{Doctor exists in third-party?}
-  F -->|No| G[Call POST /doctor (create)]
-  F -->|Yes| H[Skip or update]
-  B --> I{Service exists in third-party?}
-  I -->|No| J[Call POST /service (create)]
-  I -->|Yes| K[Skip or update]
-  B --> L[Call POST /appointment (create)]
-  L --> M[Third-party returns confirmation]
-  M --> N[CareQ marks sync as successful]
-```
-
----
-
-## Appendix B: Sample Implementation (PHP)
-
-```php
-<?php
-
-// Example endpoint implementation
-// POST /api/v1/careq-sync/patient
-
-class CareQSyncController
-{
-    public function syncPatient()
-    {
-        // 1. Validate authentication
-        $token = $this->request->header('Authorization');
-        if (!$this->validateToken($token)) {
-            return $this->jsonResponse([
-                'success' => false,
-                'error' => [
-                    'code' => 'AUTHENTICATION_FAILED',
-                    'message' => 'Invalid authentication token'
-                ]
-            ], 401);
-        }
-
-        // 2. Get request data
-        $data = $this->request->getJSON();
-
-        // 3. Validate required fields
-        $validator = $this->validate($data, [
-            'careq_id' => 'required|integer',
-            'clinic_id' => 'required|string|max:100',
-            'first_name' => 'required|string|max:256',
-            'last_name' => 'required|string|max:256',
-            'phone_number' => 'required|string|size:10'
-        ]);
-
-        if (!$validator->passes()) {
-            return $this->jsonResponse([
-                'success' => false,
-                'error' => [
-                    'code' => 'VALIDATION_ERROR',
-                    'message' => 'Validation failed',
-                    'details' => $validator->errors()
-                ]
-            ], 422);
-        }
-
-        // 4. Check if patient exists
-        $existing = $this->patientModel->where('careq_id', $data->careq_id)
-                                       ->where('clinic_id', $data->clinic_id)
-                                       ->first();
-
-        if ($existing) {
-            // Update existing patient
-            $this->patientModel->update($existing->id, [
-                'first_name' => $data->first_name,
-                'last_name' => $data->last_name,
-                'phone_number' => $data->phone_number,
-                'email' => $data->email ?? null,
-                // ... other fields
-                'updated_at' => date('Y-m-d H:i:s')
-            ]);
-
-            return $this->jsonResponse([
-                'success' => true,
-                'message' => 'Patient updated successfully',
-                'data' => [
-                    'id' => $existing->id,
-                    'careq_id' => $data->careq_id,
-                    'sync_status' => 'updated'
-                ]
-            ], 200);
-        } else {
-            // Create new patient
-            $patientId = $this->patientModel->insert([
-                'careq_id' => $data->careq_id,
-                'clinic_id' => $data->clinic_id,
-                'first_name' => $data->first_name,
-                'last_name' => $data->last_name,
-                'phone_number' => $data->phone_number,
-                'email' => $data->email ?? null,
-                // ... other fields
-                'created_at' => date('Y-m-d H:i:s'),
-                'updated_at' => date('Y-m-d H:i:s')
-            ]);
-
-            return $this->jsonResponse([
-                'success' => true,
-                'message' => 'Patient created successfully',
-                'data' => [
-                    'id' => $patientId,
-                    'careq_id' => $data->careq_id,
-                    'sync_status' => 'synced'
-                ]
-            ], 201);
-        }
-    }
-
-    private function validateToken($token)
-    {
-        // Remove 'Bearer ' prefix
-        $token = str_replace('Bearer ', '', $token);
-        
-        // Compare with your stored token
-        return $token === env('CAREQ_API_TOKEN');
-    }
-
-    private function jsonResponse($data, $statusCode = 200)
-    {
-        $data['timestamp'] = date('c');
-        return response()->json($data, $statusCode);
-    }
-}
-```
-
----
-
-## Appendix C: Database Schema Suggestions
-
-### Patients Table
-
-```sql
-CREATE TABLE `patients` (
-  `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  `careq_id` INT NOT NULL,
-  `clinic_id` VARCHAR(100) NOT NULL,
-  `first_name` VARCHAR(256) NOT NULL,
-  `last_name` VARCHAR(256) NOT NULL,
-  `email` VARCHAR(512),
-  `phone_number` VARCHAR(10) NOT NULL,
-  `date_of_birth` DATE,
-  `gender` ENUM('male', 'female', 'other'),
-  `address` VARCHAR(256),
-  `city` VARCHAR(256),
-  `state` VARCHAR(256),
-  `zip_code` VARCHAR(10),
-  `aadhar_number` VARCHAR(20),
-  `spouse_name` VARCHAR(256),
-  `father_name` VARCHAR(256),
-  `notes` TEXT,
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  UNIQUE KEY `unique_careq_patient` (`careq_id`, `clinic_id`),
-  INDEX `idx_phone` (`phone_number`),
-  INDEX `idx_clinic` (`clinic_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-```
-
-### Doctors Table
-
-```sql
-CREATE TABLE `doctors` (
-  `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  `careq_id` INT NOT NULL,
-  `clinic_id` VARCHAR(100) NOT NULL,
-  `first_name` VARCHAR(256) NOT NULL,
-  `last_name` VARCHAR(256) NOT NULL,
-  `email` VARCHAR(512),
-  `phone_number` VARCHAR(128),
-  `specialization` VARCHAR(256),
-  `notes` TEXT,
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  UNIQUE KEY `unique_careq_doctor` (`careq_id`, `clinic_id`),
-  INDEX `idx_clinic` (`clinic_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-```
-
-### Services Table
-
-```sql
-CREATE TABLE `services` (
-  `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  `careq_id` INT NOT NULL,
-  `clinic_id` VARCHAR(100) NOT NULL,
-  `name` VARCHAR(256) NOT NULL,
-  `duration` INT NOT NULL,
-  `price` DECIMAL(10, 2),
-  `currency` VARCHAR(10),
-  `description` TEXT,
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  UNIQUE KEY `unique_careq_service` (`careq_id`, `clinic_id`),
-  INDEX `idx_clinic` (`clinic_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-```
-
-### Appointments Table
-
-```sql
-CREATE TABLE `appointments` (
-  `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  `careq_id` INT NOT NULL,
-  `clinic_id` VARCHAR(100) NOT NULL,
-  `patient_careq_id` INT NOT NULL,
-  `doctor_careq_id` INT NOT NULL,
-  `service_careq_id` INT NOT NULL,
-  `start_datetime` DATETIME NOT NULL,
-  `end_datetime` DATETIME NOT NULL,
-  `status` ENUM('booked', 'confirmed', 'cancelled', 'completed', 'no-show', 'rescheduled') DEFAULT 'booked',
-  `notes` TEXT,
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  UNIQUE KEY `unique_careq_appointment` (`careq_id`, `clinic_id`),
-  INDEX `idx_patient` (`patient_careq_id`),
-  INDEX `idx_doctor` (`doctor_careq_id`),
-  INDEX `idx_datetime` (`start_datetime`),
-  INDEX `idx_status` (`status`),
-  INDEX `idx_clinic` (`clinic_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-```
 
 ---
 
