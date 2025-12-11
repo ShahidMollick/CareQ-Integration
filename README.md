@@ -992,8 +992,8 @@ Please log the following for troubleshooting:
 For questions or issues during implementation:
 
 **Technical Contact:**
-Email: [[your-technical-contact@careq.com](mailto:your-technical-contact@careq.com)]
-Phone: [your-contact-number]
+Email: [[shahid@careq.com](mailto:shahidmollick13@gmail.com)]
+Phone: [+91 9987179937
 
 **Documentation:**
 [Link to additional documentation or API portal]
