@@ -1,7 +1,7 @@
 # CareQ Third-Party Integration API Specification
 
-**Version:** 1.0.0  
-**Last Updated:** December 10, 2025  
+**Version:** 1.0.0
+**Last Updated:** December 10, 2025
 **Integration Type:** Webhook/REST API
 
 ---
@@ -23,17 +23,21 @@
 
 This document specifies the API endpoints that the third-party system must implement to receive synchronized data from CareQ. When a patient books an appointment on CareQ, the system will automatically sync the following data to your system via webhook calls:
 
-- **Patient (Customer) Information**
-- **Doctor (Provider) Information**
-- **Appointment Details**
-- **Service/Treatment Information**
+* **Patient (Customer) Information**
+* **Doctor (Provider) Information**
+* **Appointment Details**
+* **Service/Treatment Information**
 
 **Note:** Queue management functionality is NOT synced and will be handled exclusively on CareQ's side.
 
 ### Integration Flow
 
-```
-Patient Books on CareQ → CareQ Validates → CareQ Calls Your APIs → Your System Creates Records → Confirmation Sent Back
+```mermaid
+flowchart LR
+  A[Patient Books on CareQ] --> B[CareQ Validates]
+  B --> C[CareQ Calls Your APIs]
+  C --> D[Your System Creates Records]
+  D --> E[Confirmation Sent Back]
 ```
 
 ---
@@ -49,10 +53,11 @@ Authorization: Bearer YOUR_SECRET_TOKEN
 ```
 
 **Requirements:**
-- You must provide CareQ with a **secret API token**
-- Token must be at least 32 characters long
-- Token should be unique per clinic
-- Implement token validation on all endpoints
+
+* You must provide CareQ with a **secret API token**
+* Token must be at least 32 characters long
+* Token should be unique per clinic
+* Implement token validation on all endpoints
 
 ### Optional: API Key in Header
 
@@ -80,9 +85,9 @@ https://your-domain.com/api/v1/careq-sync/
 
 ### Request Format
 
-- **Content-Type:** `application/json`
-- **Character Encoding:** `UTF-8`
-- **HTTP Method:** `POST` for all create/update operations
+* **Content-Type:** `application/json`
+* **Character Encoding:** `UTF-8`
+* **HTTP Method:** `POST` for all create/update operations
 
 ### Response Format
 
@@ -102,16 +107,16 @@ All responses must return JSON with the following structure:
 
 ### HTTP Status Codes
 
-| Code | Meaning | Usage |
-|------|---------|-------|
-| 200 | Success | Record updated successfully |
-| 201 | Created | New record created |
-| 400 | Bad Request | Invalid data provided |
-| 401 | Unauthorized | Invalid or missing authentication |
-| 404 | Not Found | Record not found for update |
-| 409 | Conflict | Duplicate record exists |
-| 422 | Unprocessable Entity | Validation error |
-| 500 | Server Error | Internal server error |
+| Code | Meaning              | Usage                             |
+| ---- | -------------------- | --------------------------------- |
+| 200  | Success              | Record updated successfully       |
+| 201  | Created              | New record created                |
+| 400  | Bad Request          | Invalid data provided             |
+| 401  | Unauthorized         | Invalid or missing authentication |
+| 404  | Not Found            | Record not found for update       |
+| 409  | Conflict             | Duplicate record exists           |
+| 422  | Unprocessable Entity | Validation error                  |
+| 500  | Server Error         | Internal server error             |
 
 ---
 
@@ -124,12 +129,14 @@ All responses must return JSON with the following structure:
 **Description:** Creates or updates a patient record in your system.
 
 **Request Headers:**
+
 ```http
 Content-Type: application/json
 Authorization: Bearer YOUR_SECRET_TOKEN
 ```
 
 **Request Body:**
+
 ```json
 {
   "careq_id": 12345,
@@ -161,6 +168,7 @@ Authorization: Bearer YOUR_SECRET_TOKEN
 ```
 
 **Response (Success - 201):**
+
 ```json
 {
   "success": true,
@@ -175,6 +183,7 @@ Authorization: Bearer YOUR_SECRET_TOKEN
 ```
 
 **Response (Update - 200):**
+
 ```json
 {
   "success": true,
@@ -189,6 +198,7 @@ Authorization: Bearer YOUR_SECRET_TOKEN
 ```
 
 **Response (Error - 422):**
+
 ```json
 {
   "success": false,
@@ -203,26 +213,26 @@ Authorization: Bearer YOUR_SECRET_TOKEN
 
 **Field Requirements:**
 
-| Field | Type | Required | Max Length | Notes |
-|-------|------|----------|------------|-------|
-| careq_id | integer | Yes | - | Unique CareQ patient ID |
-| clinic_id | string | Yes | 100 | Clinic identifier |
-| first_name | string | Yes | 256 | - |
-| last_name | string | Yes | 256 | - |
-| email | string | No | 512 | Must be valid email format |
-| phone_number | string | Yes | 10 | 10-digit mobile number |
-| date_of_birth | string | No | - | Format: YYYY-MM-DD |
-| gender | string | No | 10 | male/female/other |
-| address | string | No | 256 | - |
-| city | string | No | 256 | - |
-| state | string | No | 256 | - |
-| zip_code | string | No | 10 | - |
-| aadhar_number | string | No | 20 | Aadhaar card number |
-| spouse_name | string | No | 256 | - |
-| father_name | string | No | 256 | - |
-| notes | text | No | - | Any additional notes |
-| timezone | string | No | 256 | e.g., Asia/Kolkata |
-| language | string | No | 10 | e.g., en-US |
+| Field         | Type    | Required | Max Length | Notes                      |
+| ------------- | ------- | -------- | ---------- | -------------------------- |
+| careq_id      | integer | Yes      | -          | Unique CareQ patient ID    |
+| clinic_id     | string  | Yes      | 100        | Clinic identifier          |
+| first_name    | string  | Yes      | 256        | -                          |
+| last_name     | string  | Yes      | 256        | -                          |
+| email         | string  | No       | 512        | Must be valid email format |
+| phone_number  | string  | Yes      | 10         | 10-digit mobile number     |
+| date_of_birth | string  | No       | -          | Format: YYYY-MM-DD         |
+| gender        | string  | No       | 10         | male/female/other          |
+| address       | string  | No       | 256        | -                          |
+| city          | string  | No       | 256        | -                          |
+| state         | string  | No       | 256        | -                          |
+| zip_code      | string  | No       | 10         | -                          |
+| aadhar_number | string  | No       | 20         | Aadhaar card number        |
+| spouse_name   | string  | No       | 256        | -                          |
+| father_name   | string  | No       | 256        | -                          |
+| notes         | text    | No       | -          | Any additional notes       |
+| timezone      | string  | No       | 256        | e.g., Asia/Kolkata         |
+| language      | string  | No       | 10         | e.g., en-US                |
 
 ---
 
@@ -233,12 +243,14 @@ Authorization: Bearer YOUR_SECRET_TOKEN
 **Description:** Creates or updates a doctor/provider record in your system.
 
 **Request Headers:**
+
 ```http
 Content-Type: application/json
 Authorization: Bearer YOUR_SECRET_TOKEN
 ```
 
 **Request Body:**
+
 ```json
 {
   "careq_id": 456,
@@ -263,6 +275,7 @@ Authorization: Bearer YOUR_SECRET_TOKEN
 ```
 
 **Response (Success - 201):**
+
 ```json
 {
   "success": true,
@@ -278,24 +291,24 @@ Authorization: Bearer YOUR_SECRET_TOKEN
 
 **Field Requirements:**
 
-| Field | Type | Required | Max Length | Notes |
-|-------|------|----------|------------|-------|
-| careq_id | integer | Yes | - | Unique CareQ provider ID |
-| clinic_id | string | Yes | 100 | Clinic identifier |
-| first_name | string | Yes | 256 | - |
-| last_name | string | Yes | 256 | - |
-| email | string | No | 512 | Must be valid email format |
-| phone_number | string | No | 128 | - |
-| mobile_number | string | No | 128 | - |
-| address | string | No | 256 | - |
-| city | string | No | 256 | - |
-| state | string | No | 256 | - |
-| zip_code | string | No | 10 | - |
-| specialization | string | No | 256 | Doctor's specialty |
-| notes | text | No | - | Any additional notes |
-| is_private | boolean | No | - | Whether provider is private |
-| timezone | string | No | 256 | e.g., Asia/Kolkata |
-| language | string | No | 10 | e.g., en-US |
+| Field          | Type    | Required | Max Length | Notes                       |
+| -------------- | ------- | -------- | ---------- | --------------------------- |
+| careq_id       | integer | Yes      | -          | Unique CareQ provider ID    |
+| clinic_id      | string  | Yes      | 100        | Clinic identifier           |
+| first_name     | string  | Yes      | 256        | -                           |
+| last_name      | string  | Yes      | 256        | -                           |
+| email          | string  | No       | 512        | Must be valid email format  |
+| phone_number   | string  | No       | 128        | -                           |
+| mobile_number  | string  | No       | 128        | -                           |
+| address        | string  | No       | 256        | -                           |
+| city           | string  | No       | 256        | -                           |
+| state          | string  | No       | 256        | -                           |
+| zip_code       | string  | No       | 10         | -                           |
+| specialization | string  | No       | 256        | Doctor's specialty          |
+| notes          | text    | No       | -          | Any additional notes        |
+| is_private     | boolean | No       | -          | Whether provider is private |
+| timezone       | string  | No       | 256        | e.g., Asia/Kolkata          |
+| language       | string  | No       | 10         | e.g., en-US                 |
 
 ---
 
@@ -306,12 +319,14 @@ Authorization: Bearer YOUR_SECRET_TOKEN
 **Description:** Creates or updates a service/treatment record in your system.
 
 **Request Headers:**
+
 ```http
 Content-Type: application/json
 Authorization: Bearer YOUR_SECRET_TOKEN
 ```
 
 **Request Body:**
+
 ```json
 {
   "careq_id": 789,
@@ -331,6 +346,7 @@ Authorization: Bearer YOUR_SECRET_TOKEN
 ```
 
 **Response (Success - 201):**
+
 ```json
 {
   "success": true,
@@ -346,19 +362,19 @@ Authorization: Bearer YOUR_SECRET_TOKEN
 
 **Field Requirements:**
 
-| Field | Type | Required | Max Length | Notes |
-|-------|------|----------|------------|-------|
-| careq_id | integer | Yes | - | Unique CareQ service ID |
-| clinic_id | string | Yes | 100 | Clinic identifier |
-| name | string | Yes | 256 | Service name |
-| duration | integer | Yes | - | Duration in minutes |
-| price | decimal | No | - | Service price |
-| currency | string | No | 10 | e.g., INR, USD |
-| description | text | No | - | Service description |
-| location | string | No | 256 | Service location |
-| color | string | No | 7 | Hex color code |
-| category | string | No | 256 | Service category |
-| is_private | boolean | No | - | Whether service is private |
+| Field       | Type    | Required | Max Length | Notes                      |
+| ----------- | ------- | -------- | ---------- | -------------------------- |
+| careq_id    | integer | Yes      | -          | Unique CareQ service ID    |
+| clinic_id   | string  | Yes      | 100        | Clinic identifier          |
+| name        | string  | Yes      | 256        | Service name               |
+| duration    | integer | Yes      | -          | Duration in minutes        |
+| price       | decimal | No       | -          | Service price              |
+| currency    | string  | No       | 10         | e.g., INR, USD             |
+| description | text    | No       | -          | Service description        |
+| location    | string  | No       | 256        | Service location           |
+| color       | string  | No       | 7          | Hex color code             |
+| category    | string  | No       | 256        | Service category           |
+| is_private  | boolean | No       | -          | Whether service is private |
 
 ---
 
@@ -369,12 +385,14 @@ Authorization: Bearer YOUR_SECRET_TOKEN
 **Description:** Creates or updates an appointment record in your system.
 
 **Request Headers:**
+
 ```http
 Content-Type: application/json
 Authorization: Bearer YOUR_SECRET_TOKEN
 ```
 
 **Request Body:**
+
 ```json
 {
   "careq_id": 10001,
@@ -399,6 +417,7 @@ Authorization: Bearer YOUR_SECRET_TOKEN
 ```
 
 **Response (Success - 201):**
+
 ```json
 {
   "success": true,
@@ -415,24 +434,24 @@ Authorization: Bearer YOUR_SECRET_TOKEN
 
 **Field Requirements:**
 
-| Field | Type | Required | Max Length | Notes |
-|-------|------|----------|------------|-------|
-| careq_id | integer | Yes | - | Unique CareQ appointment ID |
-| clinic_id | string | Yes | 100 | Clinic identifier |
-| patient_careq_id | integer | Yes | - | CareQ patient ID (foreign key) |
-| doctor_careq_id | integer | Yes | - | CareQ doctor ID (foreign key) |
-| service_careq_id | integer | Yes | - | CareQ service ID (foreign key) |
-| book_datetime | string | Yes | - | When booking was made (ISO 8601) |
-| start_datetime | string | Yes | - | Appointment start time (ISO 8601) |
-| end_datetime | string | Yes | - | Appointment end time (ISO 8601) |
-| status | string | Yes | 50 | booked/confirmed/cancelled/completed |
-| location | string | No | 256 | Appointment location |
-| notes | text | No | - | Appointment notes |
-| prescription | text/json | No | - | Prescription details (if any) |
-| referred_by | string | No | 256 | Referring doctor name |
-| referred_by_address | string | No | 512 | Referring doctor address |
-| color | string | No | 7 | Hex color code |
-| hash | string | No | 512 | Unique appointment hash |
+| Field               | Type      | Required | Max Length | Notes                                |
+| ------------------- | --------- | -------- | ---------- | ------------------------------------ |
+| careq_id            | integer   | Yes      | -          | Unique CareQ appointment ID          |
+| clinic_id           | string    | Yes      | 100        | Clinic identifier                    |
+| patient_careq_id    | integer   | Yes      | -          | CareQ patient ID (foreign key)       |
+| doctor_careq_id     | integer   | Yes      | -          | CareQ doctor ID (foreign key)        |
+| service_careq_id    | integer   | Yes      | -          | CareQ service ID (foreign key)       |
+| book_datetime       | string    | Yes      | -          | When booking was made (ISO 8601)     |
+| start_datetime      | string    | Yes      | -          | Appointment start time (ISO 8601)    |
+| end_datetime        | string    | Yes      | -          | Appointment end time (ISO 8601)      |
+| status              | string    | Yes      | 50         | booked/confirmed/cancelled/completed |
+| location            | string    | No       | 256        | Appointment location                 |
+| notes               | text      | No       | -          | Appointment notes                    |
+| prescription        | text/json | No       | -          | Prescription details (if any)        |
+| referred_by         | string    | No       | 256        | Referring doctor name                |
+| referred_by_address | string    | No       | 512        | Referring doctor address             |
+| color               | string    | No       | 7          | Hex color code                       |
+| hash                | string    | No       | 512        | Unique appointment hash              |
 
 ---
 
@@ -443,6 +462,7 @@ Authorization: Bearer YOUR_SECRET_TOKEN
 **Description:** Updates the status of an existing appointment.
 
 **Request Body:**
+
 ```json
 {
   "careq_id": 10001,
@@ -454,6 +474,7 @@ Authorization: Bearer YOUR_SECRET_TOKEN
 ```
 
 **Response (Success - 200):**
+
 ```json
 {
   "success": true,
@@ -468,12 +489,13 @@ Authorization: Bearer YOUR_SECRET_TOKEN
 ```
 
 **Valid Status Values:**
-- `booked` - Initial booking
-- `confirmed` - Appointment confirmed
-- `cancelled` - Appointment cancelled
-- `completed` - Appointment completed
-- `no-show` - Patient didn't show up
-- `rescheduled` - Appointment rescheduled
+
+* `booked` - Initial booking
+* `confirmed` - Appointment confirmed
+* `cancelled` - Appointment cancelled
+* `completed` - Appointment completed
+* `no-show` - Patient didn't show up
+* `rescheduled` - Appointment rescheduled
 
 ---
 
@@ -484,6 +506,7 @@ Authorization: Bearer YOUR_SECRET_TOKEN
 **Description:** Cancels an appointment in your system.
 
 **Request Body:**
+
 ```json
 {
   "careq_id": 10001,
@@ -495,6 +518,7 @@ Authorization: Bearer YOUR_SECRET_TOKEN
 ```
 
 **Response (Success - 200):**
+
 ```json
 {
   "success": true,
@@ -517,6 +541,7 @@ Authorization: Bearer YOUR_SECRET_TOKEN
 **Description:** Syncs multiple records in a single request for efficiency.
 
 **Request Body:**
+
 ```json
 {
   "clinic_id": "clinic_abc",
@@ -543,6 +568,7 @@ Authorization: Bearer YOUR_SECRET_TOKEN
 ```
 
 **Response (Success - 200):**
+
 ```json
 {
   "success": true,
@@ -592,11 +618,13 @@ Authorization: Bearer YOUR_SECRET_TOKEN
 **Description:** Endpoint for CareQ to verify your API is operational.
 
 **Request Headers:**
+
 ```http
 Authorization: Bearer YOUR_SECRET_TOKEN
 ```
 
 **Response (Success - 200):**
+
 ```json
 {
   "success": true,
@@ -737,15 +765,15 @@ All error responses must follow this structure:
 
 ### Error Codes
 
-| Code | HTTP Status | Description |
-|------|-------------|-------------|
-| AUTHENTICATION_FAILED | 401 | Invalid or missing token |
-| VALIDATION_ERROR | 422 | Data validation failed |
-| DUPLICATE_RECORD | 409 | Record already exists |
-| RECORD_NOT_FOUND | 404 | Record not found |
-| INVALID_REQUEST | 400 | Malformed request |
-| SERVER_ERROR | 500 | Internal server error |
-| RATE_LIMIT_EXCEEDED | 429 | Too many requests |
+| Code                  | HTTP Status | Description              |
+| --------------------- | ----------- | ------------------------ |
+| AUTHENTICATION_FAILED | 401         | Invalid or missing token |
+| VALIDATION_ERROR      | 422         | Data validation failed   |
+| DUPLICATE_RECORD      | 409         | Record already exists    |
+| RECORD_NOT_FOUND      | 404         | Record not found         |
+| INVALID_REQUEST       | 400         | Malformed request        |
+| SERVER_ERROR          | 500         | Internal server error    |
+| RATE_LIMIT_EXCEEDED   | 429         | Too many requests        |
 
 ---
 
@@ -764,11 +792,13 @@ You may whitelist CareQ's server IP addresses:
 CareQ will sign each request with HMAC-SHA256:
 
 **Header:**
+
 ```http
 X-CareQ-Signature: sha256=abc123def456...
 ```
 
 **Verification (Pseudocode):**
+
 ```javascript
 const crypto = require('crypto');
 
@@ -787,6 +817,7 @@ function verifySignature(payload, signature, secret) {
 Reject requests older than 5 minutes:
 
 **Header:**
+
 ```http
 X-CareQ-Timestamp: 1702209600
 ```
@@ -798,13 +829,15 @@ X-CareQ-Timestamp: 1702209600
 ### Test Credentials
 
 CareQ will provide:
-- Test API Token
-- Test Clinic ID
-- Sandbox environment URL
+
+* Test API Token
+* Test Clinic ID
+* Sandbox environment URL
 
 ### Sample Test Data
 
 **Test Patient:**
+
 ```json
 {
   "careq_id": 99999,
@@ -818,15 +851,15 @@ CareQ will provide:
 
 ### Validation Checklist
 
-- [ ] All endpoints return proper HTTP status codes
-- [ ] Authentication is validated on all endpoints
-- [ ] Duplicate records are handled correctly
-- [ ] Error messages are descriptive
-- [ ] Response times are under 3 seconds
-- [ ] Idempotency is supported (same request twice = same result)
-- [ ] Foreign key validation (patient/doctor/service exist)
-- [ ] Timezone handling is correct
-- [ ] Date format validation
+* [ ] All endpoints return proper HTTP status codes
+* [ ] Authentication is validated on all endpoints
+* [ ] Duplicate records are handled correctly
+* [ ] Error messages are descriptive
+* [ ] Response times are under 3 seconds
+* [ ] Idempotency is supported (same request twice = same result)
+* [ ] Foreign key validation (patient/doctor/service exist)
+* [ ] Timezone handling is correct
+* [ ] Date format validation
 
 ---
 
@@ -834,10 +867,11 @@ CareQ will provide:
 
 Please implement rate limiting on your side:
 
-- **Recommended:** 100 requests per minute per clinic
-- **Burst:** Allow up to 200 requests in short bursts
+* **Recommended:** 100 requests per minute per clinic
+* **Burst:** Allow up to 200 requests in short bursts
 
 **Rate Limit Headers:**
+
 ```http
 X-RateLimit-Limit: 100
 X-RateLimit-Remaining: 95
@@ -850,10 +884,10 @@ X-RateLimit-Reset: 1702209600
 
 CareQ will implement the following retry logic:
 
-- **Initial Delay:** 5 seconds
-- **Max Retries:** 3 attempts
-- **Backoff:** Exponential (5s, 10s, 20s)
-- **Timeout:** 30 seconds per request
+* **Initial Delay:** 5 seconds
+* **Max Retries:** 3 attempts
+* **Backoff:** Exponential (5s, 10s, 20s)
+* **Timeout:** 30 seconds per request
 
 **Your system should be idempotent** to handle duplicate requests safely.
 
@@ -864,16 +898,18 @@ CareQ will implement the following retry logic:
 Please log the following for troubleshooting:
 
 1. **Request Logs:**
-   - Timestamp
-   - CareQ ID
-   - Clinic ID
-   - Endpoint called
-   - Response status
+
+   * Timestamp
+   * CareQ ID
+   * Clinic ID
+   * Endpoint called
+   * Response status
 
 2. **Error Logs:**
-   - Full error message
-   - Stack trace
-   - Request payload (sanitized)
+
+   * Full error message
+   * Stack trace
+   * Request payload (sanitized)
 
 ---
 
@@ -881,54 +917,40 @@ Please log the following for troubleshooting:
 
 For questions or issues during implementation:
 
-**Technical Contact:**  
-Email: [your-technical-contact@careq.com]  
+**Technical Contact:**
+Email: [[your-technical-contact@careq.com](mailto:your-technical-contact@careq.com)]
 Phone: [your-contact-number]
 
-**Documentation:**  
+**Documentation:**
 [Link to additional documentation or API portal]
 
 ---
 
 ## Changelog
 
-| Version | Date | Changes |
-|---------|------|---------|
-| 1.0.0 | 2025-12-10 | Initial specification |
+| Version | Date       | Changes               |
+| ------- | ---------- | --------------------- |
+| 1.0.0   | 2025-12-10 | Initial specification |
 
 ---
 
 ## Appendix A: Complete Integration Workflow
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    Complete Sync Workflow                        │
-└─────────────────────────────────────────────────────────────────┘
-
-1. Patient books appointment on CareQ
-   │
-   ├─> CareQ validates booking
-   │
-   ├─> CareQ checks if patient exists in third-party
-   │   │
-   │   ├─> NO: Call POST /patient (create)
-   │   └─> YES: Call POST /patient (update)
-   │
-   ├─> CareQ checks if doctor exists in third-party
-   │   │
-   │   ├─> NO: Call POST /doctor (create)
-   │   └─> YES: Skip or update
-   │
-   ├─> CareQ checks if service exists in third-party
-   │   │
-   │   ├─> NO: Call POST /service (create)
-   │   └─> YES: Skip or update
-   │
-   ├─> Call POST /appointment (create)
-   │
-   ├─> Third-party returns confirmation
-   │
-   └─> CareQ marks sync as successful
+```mermaid
+flowchart TD
+  A[Patient books appointment on CareQ] --> B[CareQ validates booking]
+  B --> C{Patient exists in third-party?}
+  C -->|No| D[Call POST /patient (create)]
+  C -->|Yes| E[Call POST /patient (update)]
+  B --> F{Doctor exists in third-party?}
+  F -->|No| G[Call POST /doctor (create)]
+  F -->|Yes| H[Skip or update]
+  B --> I{Service exists in third-party?}
+  I -->|No| J[Call POST /service (create)]
+  I -->|Yes| K[Skip or update]
+  B --> L[Call POST /appointment (create)]
+  L --> M[Third-party returns confirmation]
+  M --> N[CareQ marks sync as successful]
 ```
 
 ---
@@ -1150,6 +1172,7 @@ CREATE TABLE `appointments` (
 **END OF SPECIFICATION**
 
 Please review this specification and provide:
+
 1. Estimated implementation timeline
 2. Your base URL for the API
 3. Authentication token (for production and testing)
