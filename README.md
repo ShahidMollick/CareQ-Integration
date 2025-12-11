@@ -992,7 +992,7 @@ Please log the following for troubleshooting:
 For questions or issues during implementation:
 
 **Technical Contact:**
-Email: [[shahid@careq.com](mailto:shahidmollick13@gmail.com)]
+Email: [[shahid@careq.in](mailto:shahidmollick13@gmail.com)]
 Phone: [+91 9987179937
 
 **Documentation:**
